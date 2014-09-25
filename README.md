@@ -15,7 +15,7 @@ Log in the VM, pick a temporary folder (e.g., `~/build`), and then do:
 
 ```
 git clone https://github.com/droboports/python2.git
-cd unrar
+cd python2
 ./build.sh
 ```
 
