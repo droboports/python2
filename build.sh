@@ -168,6 +168,36 @@ make -j1 install PYTHON_FOR_BUILD="${PWD}/../${FOLDER}-native/python"
 popd
 }
 
+### SETUPTOOLS ###
+_build_setuptools() {
+local VERSION="5.8"
+local FOLDER="setuptools-${VERSION}"
+local FILE="${FOLDER}.tar.gz"
+local URL="https://pypi.python.org/packages/source/s/setuptools/${FILE}"
+export LDSHARED="$CC -pthread -shared"
+export _PYTHON_HOST_PLATFORM="linux-armv7l"
+
+_download_tgz "${FILE}" "${URL}" "${FOLDER}"
+pushd target/"${FOLDER}"
+PYTHONPATH="${DEST}/lib/python2.7/site-packages" python setup.py install --prefix="${DEST}"
+popd
+}
+
+### PIP ###
+_build_pip() {
+local VERSION="1.5.6"
+local FOLDER="pip-${VERSION}"
+local FILE="${FOLDER}.tar.gz"
+local URL="https://pypi.python.org/packages/source/p/pip/${FILE}"
+export LDSHARED="$CC -pthread -shared"
+export _PYTHON_HOST_PLATFORM="linux-armv7l"
+
+_download_tgz "${FILE}" "${URL}" "${FOLDER}"
+pushd target/"${FOLDER}"
+PYTHONPATH="${DEST}/lib/python2.7/site-packages" python setup.py install --prefix="${DEST}"
+popd
+}
+
 ### BUILD ###
 _build() {
   _build_zlib
@@ -176,6 +206,8 @@ _build() {
   _build_ncurses
   _build_sqlite
   _build_python
+  _build_setuptools
+  _build_pip
   _package
 }
 
