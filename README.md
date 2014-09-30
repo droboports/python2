@@ -25,13 +25,26 @@ Each invocation creates a log file with all the generated output.
 * `./build.sh clean` removes everything but downloaded files.
 * `./build.sh package` repackages the DroboApp, without recompiling.
 
+## Missing modules
+
+```
+Python build finished, but the necessary bits to build these modules were not found:
+_tkinter           bsddb185           gdbm            
+linuxaudiodev      ossaudiodev        readline        
+sunaudiodev                                           
+To find the necessary bits, look in setup.py in detect_modules() for the module's name.
+```
+
 ## Sources
 
 * zlib: http://zlib.net/
-* bzio: http://bzip.org/
+* bzip: http://bzip.org/
 * openssl: http://www.openssl.org/
 * ncurses: https://www.gnu.org/software/ncurses/
 * sqlite: http://sqlite.org/
+* bdb: http://www.oracle.com/technetwork/database/database-technologies/berkeleydb/overview/index.html
+* libffi: https://sourceware.org/libffi/
+* expat: http://expat.sourceforge.net/
 * python: http://www.python.org/
 
 ## Help support the apps
