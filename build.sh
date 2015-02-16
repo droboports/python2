@@ -21,287 +21,151 @@ exec 1> >(tee -a "${logfile}")
 # redirect errors to stdout
 exec 2> >(tee -a "${logfile}" >&2)
 
-### environment variables ###
+### environment setup ###
 source crosscompile.sh
-export NAME="python2"
+export NAME="$(basename ${PWD})"
 export DEST="/mnt/DroboFS/Shares/DroboApps/${NAME}"
 export DEPS="${PWD}/target/install"
-export XDEST=~/xtools/python2
-export CFLAGS="$CFLAGS -Os -fPIC -ffunction-sections -fdata-sections"
-export CXXFLAGS="$CXXFLAGS $CFLAGS"
+export CFLAGS="${CFLAGS:-} -Os -fPIC"
+export CXXFLAGS="${CXXFLAGS:-} ${CFLAGS}"
 export CPPFLAGS="-I${DEPS}/include"
 export LDFLAGS="${LDFLAGS:-} -Wl,-rpath,${DEST}/lib -L${DEST}/lib"
-export PKG_CONFIG_LIBDIR="${DEST}/lib/pkgconfig"
 alias make="make -j8 V=1 VERBOSE=1"
 
+### support functions ###
+# Download a TAR file and unpack it, removing old files.
+# $1: file
+# $2: url
+# $3: folder
+_download_tar() {
+  [[ ! -d "download" ]]      && mkdir -p "download"
+  [[ ! -d "target" ]]        && mkdir -p "target"
+  [[ ! -f "download/${1}" ]] && wget -O "download/${1}" "${2}"
+  [[   -d "target/${3}" ]]   && rm -vfr "target/${3}"
+  [[ ! -d "target/${3}" ]]   && tar -xvf "download/${1}" -C target
+  return 0
+}
+
+# Download a TGZ file and unpack it, removing old files.
 # $1: file
 # $2: url
 # $3: folder
 _download_tgz() {
+  [[ ! -d "download" ]]      && mkdir -p "download"
+  [[ ! -d "target" ]]        && mkdir -p "target"
   [[ ! -f "download/${1}" ]] && wget -O "download/${1}" "${2}"
-  [[ -d "target/${3}" ]] && rm -v -fr "target/${3}"
-  [[ ! -d "target/${3}" ]] && tar -zxvf "download/${1}" -C target
+  [[   -d "target/${3}" ]]   && rm -vfr "target/${3}"
+  [[ ! -d "target/${3}" ]]   && tar -zxvf "download/${1}" -C target
+  return 0
 }
 
-# $1: folder
+# Download a BZ2 file and unpack it, removing old files.
+# $1: file
 # $2: url
+# $3: folder
+_download_bz2() {
+  [[ ! -d "download" ]]      && mkdir -p "download"
+  [[ ! -d "target" ]]        && mkdir -p "target"
+  [[ ! -f "download/${1}" ]] && wget -O "download/${1}" "${2}"
+  [[   -d "target/${3}" ]]   && rm -vfr "target/${3}"
+  [[ ! -d "target/${3}" ]]   && tar -jxvf "download/${1}" -C target
+  return 0
+}
+
+# Download a XZ file and unpack it, removing old files.
+# $1: file
+# $2: url
+# $3: folder
+_download_xz() {
+  [[ ! -d "download" ]]      && mkdir -p "download"
+  [[ ! -d "target" ]]        && mkdir -p "target"
+  [[ ! -f "download/${1}" ]] && wget -O "download/${1}" "${2}"
+  [[   -d "target/${3}" ]]   && rm -vfr "target/${3}"
+  [[ ! -d "target/${3}" ]]   && tar -Jxvf "download/${1}" -C target
+  return 0
+}
+
+# Download a DroboApp and unpack it, removing old files.
+# $1: file
+# $2: url
+# $3: folder
+_download_app() {
+  [[ ! -d "download" ]]      && mkdir -p "download"
+  [[ ! -d "target" ]]        && mkdir -p "target"
+  [[ ! -f "download/${1}" ]] && wget -O "download/${1}" "${2}"
+  [[   -d "target/${3}" ]]   && rm -vfr "target/${3}"
+  mkdir -p "target/${3}"
+  tar -zxvf "download/${1}" -C "target/${3}"
+  return 0
+}
+
+# Clone last commit of a single branch from git, removing old files.
+# $1: branch
+# $2: folder
+# $3: url
 _download_git() {
-  [[ -d "target/${1}" ]] && rm -v -fr "target/${1}"
-  [[ ! -d "target/${1}" ]] && git clone "${2}" "target/${1}"
+  [[ ! -d "target" ]]        && mkdir -p "target"
+  [[   -d "target/${2}" ]]   && rm -vfr "target/${2}"
+  [[ ! -d "target/${2}" ]]   && git clone --branch "${1}" --single-branch --depth 1 "${3}" "target/${2}"
+  return 0
 }
 
-### ZLIB ###
-_build_zlib() {
-local VERSION="1.2.8"
-local FOLDER="zlib-${VERSION}"
-local FILE="${FOLDER}.tar.gz"
-local URL="http://zlib.net/${FILE}"
-
-_download_tgz "${FILE}" "${URL}" "${FOLDER}"
-pushd target/"${FOLDER}"
-./configure --prefix="${DEPS}" --libdir="${DEST}/lib"
-make
-make install
-rm -v "${DEST}/lib"/*.a
-popd
+# Download a file, overwriting existing.
+# $1: file
+# $2: url
+_download_file() {
+  [[ ! -d "download" ]]      && mkdir -p "download"
+  [[ ! -f "download/${1}" ]] && wget -O "download/${1}" "${2}"
+  return 0
 }
 
-### BZIP ###
-_build_bzip() {
-local VERSION="1.0.6"
-local FOLDER="bzip2-${VERSION}"
-local FILE="${FOLDER}.tar.gz"
-local URL="http://bzip.org/1.0.6/${FILE}"
-
-_download_tgz "${FILE}" "${URL}" "${FOLDER}"
-pushd target/"${FOLDER}"
-sed -i -e "s/all: libbz2.a bzip2 bzip2recover test/all: libbz2.a bzip2 bzip2recover/" Makefile
-make -f Makefile-libbz2_so CC="${CC}" AR="${AR}" RANLIB="${RANLIB}" CFLAGS="${CFLAGS} -fpic -fPIC -Wall -D_FILE_OFFSET_BITS=64"
-ln -s libbz2.so.1.0.6 libbz2.so
-cp -avR *.h "${DEPS}/include/"
-cp -avR *.so* "${DEST}/lib/"
-popd
+# Download a file in a specific folder, overwriting existing.
+# $1: file
+# $2: url
+# $3: folder
+_download_file_in_folder() {
+  [[ ! -d "download/${3}" ]]      && mkdir -p "download/${3}"
+  [[ ! -f "download/${3}/${1}" ]] && wget -O "download/${3}/${1}" "${2}"
+  return 0
 }
 
-### OPENSSL ###
-_build_openssl() {
-local VERSION="1.0.1i"
-local FOLDER="openssl-${VERSION}"
-local FILE="${FOLDER}.tar.gz"
-local URL="http://www.openssl.org/source/${FILE}"
-
-_download_tgz "${FILE}" "${URL}" "${FOLDER}"
-pushd target/"${FOLDER}"
-./Configure --prefix="${DEPS}" \
-  --openssldir="${DEST}/etc/ssl" \
-  --with-zlib-include="${DEPS}/include" \
-  --with-zlib-lib="${DEPS}/lib" \
-  shared zlib-dynamic threads linux-armv4 -DL_ENDIAN ${CFLAGS} ${LDFLAGS}
-sed -i -e "s/-O3//g" Makefile
-make -j1
-make install_sw
-mkdir -p "${DEST}"/libexec
-cp -avR "${DEPS}/bin/openssl" "${DEST}/libexec/"
-cp -avR "${DEPS}/lib"/* "${DEST}/lib/"
-rm -fvr "${DEPS}/lib"
-rm -fv "${DEST}/lib"/*.a
-sed -i -e "s|^exec_prefix=.*|exec_prefix=${DEST}|g" "${DEST}"/lib/pkgconfig/openssl.pc
-popd
-}
-
-### NCURSES ###
-_build_ncurses() {
-local VERSION="5.9"
-local FOLDER="ncurses-${VERSION}"
-local FILE="${FOLDER}.tar.gz"
-local URL="http://ftp.gnu.org/gnu/ncurses/${FILE}"
-
-_download_tgz "${FILE}" "${URL}" "${FOLDER}"
-pushd target/"${FOLDER}"
-./configure --host=arm-none-linux-gnueabi --prefix="${DEPS}" --libdir="${DEST}/lib" --datadir="${DEST}/share" --with-shared --enable-rpath
-make
-make install
-rm -v "${DEST}/lib"/*.a
-popd
-}
-
-### SQLITE ###
-_build_sqlite() {
-local VERSION="3080600"
-local FOLDER="sqlite-autoconf-${VERSION}"
-local FILE="${FOLDER}.tar.gz"
-local URL="http://sqlite.org/2014/${FILE}"
-
-_download_tgz "${FILE}" "${URL}" "${FOLDER}"
-pushd target/"${FOLDER}"
-./configure --host=arm-none-linux-gnueabi --prefix="${DEPS}" --libdir="${DEST}/lib" --disable-static
-make
-make install
-popd
-}
-
-### BDB ###
-_build_bdb() {
-local VERSION="5.3.28"
-local FOLDER="db-${VERSION}"
-local FILE="${FOLDER}.tar.gz"
-local URL="http://download.oracle.com/berkeley-db/${FILE}"
-
-_download_tgz "${FILE}" "${URL}" "${FOLDER}"
-pushd "target/${FOLDER}/build_unix"
-../dist/configure --host=arm-none-linux-gnueabi --prefix="${DEPS}" --libdir="${DEST}/lib" --disable-static --enable-compat185 --enable-dbm
-make
-make install
-popd
-}
-
-### LIBFFI ###
-_build_libffi() {
-local VERSION="3.1"
-local FOLDER="libffi-${VERSION}"
-local FILE="${FOLDER}.tar.gz"
-local URL="ftp://sourceware.org/pub/libffi/${FILE}"
-
-_download_tgz "${FILE}" "${URL}" "${FOLDER}"
-pushd target/"${FOLDER}"
-./configure --host=arm-none-linux-gnueabi --prefix="${DEPS}" --libdir="${DEST}/lib" --disable-static
-make
-make install
-mkdir -vp "${DEPS}/include/"
-cp -v "${DEST}/lib/${FOLDER}/include"/* "${DEPS}/include/"
-popd
-}
-
-### EXPAT ###
-_build_expat() {
-local VERSION="2.1.0"
-local FOLDER="expat-${VERSION}"
-local FILE="${FOLDER}.tar.gz"
-local URL="http://switch.dl.sourceforge.net/project/expat/expat/2.1.0/${FILE}"
-
-_download_tgz "${FILE}" "${URL}" "${FOLDER}"
-pushd target/"${FOLDER}"
-./configure --host=arm-none-linux-gnueabi --prefix="${DEPS}" --libdir="${DEST}/lib" --disable-static
-make
-make install
-popd
-}
-
-### PYTHON2 ###
-_build_python() {
-local VERSION="2.7.8"
-local FOLDER="Python-${VERSION}"
-local FILE="${FOLDER}.tgz"
-local URL="https://www.python.org/ftp/python/2.7.8/${FILE}"
-
-_download_tgz "${FILE}" "${URL}" "${FOLDER}"
-
-[[ -d target/"${FOLDER}-native" ]] && rm -fvR target/"${FOLDER}-native"
-cp -avR target/"${FOLDER}" target/"${FOLDER}-native"
-( source uncrosscompile.sh
-  pushd target/"${FOLDER}-native"
-  ./configure
-  make )
-
-pushd target/"${FOLDER}"
-export _PYTHON_HOST_PLATFORM="linux-armv5tejl"
-rm -fvR Modules/_ctypes/libffi*
-./configure --host=arm-none-linux-gnueabi --build="$(uname -p)" --prefix="${DEST}" --enable-shared --enable-ipv6 --enable-unicode --with-system-ffi --with-system-expat --with-dbmliborder=bdb:gdbm:ndbm \
-  PYTHON_FOR_BUILD="_PYTHON_PROJECT_BASE=${PWD} _PYTHON_HOST_PLATFORM=${_PYTHON_HOST_PLATFORM} PYTHONPATH=${PWD}/build/lib.${_PYTHON_HOST_PLATFORM}-2.7:${PWD}/Lib:${PWD}/Lib/plat-linux2 ${PWD}/../${FOLDER}-native/python" \
-  CPPFLAGS="${CPPFLAGS} -I${DEPS}/include/ncurses" LDFLAGS="${LDFLAGS} -L${PWD}"\
-  ac_cv_have_long_long_format=yes ac_cv_buggy_getaddrinfo=no ac_cv_file__dev_ptmx=yes ac_cv_file__dev_ptc=no
-make || true
-cp -v "../${FOLDER}-native/Parser/pgen" Parser/pgen
-make
-cp -av "${PWD}/build/lib.${_PYTHON_HOST_PLATFORM}-2.7/"_sysconfigdata.* "${PWD}/build/"
-make install PYTHON_FOR_BUILD="_PYTHON_PROJECT_BASE=${PWD} _PYTHON_HOST_PLATFORM=${_PYTHON_HOST_PLATFORM} PYTHONPATH=${PWD}/build ${PWD}/../${FOLDER}-native/python"
-popd
-}
-
-### SETUPTOOLS ###
-_build_setuptools() {
-local VERSION="5.8"
-local FOLDER="setuptools-${VERSION}"
-local FILE="${FOLDER}.tar.gz"
-local URL="https://pypi.python.org/packages/source/s/setuptools/${FILE}"
-local XPYTHON="${PWD}/target/Python-2.7.8-native/python"
-
-_download_tgz "${FILE}" "${URL}" "${FOLDER}"
-pushd target/"${FOLDER}"
-PYTHONPATH="${DEST}/lib/python2.7/site-packages" "${XPYTHON}" setup.py \
-  build --executable="${DEST}/bin/python2.7" \
-  install --prefix="${DEST}" --force
-for f in {easy_install,easy_install-2.7}; do
-  sed -i -e "1 s|^.*$|#!${DEST}/bin/python2.7|g" "${DEST}/bin/$f"
-done
-popd
-}
-
-### PIP ###
-_build_pip() {
-local VERSION="1.5.6"
-local FOLDER="pip-${VERSION}"
-local FILE="${FOLDER}.tar.gz"
-local URL="https://pypi.python.org/packages/source/p/pip/${FILE}"
-local XPYTHON="${PWD}/target/Python-2.7.8-native/python"
-
-_download_tgz "${FILE}" "${URL}" "${FOLDER}"
-pushd target/"${FOLDER}"
-PYTHONPATH="${DEST}/lib/python2.7/site-packages" "${XPYTHON}" setup.py \
-  build --executable="${DEST}/bin/python2.7" \
-  install --prefix="${DEST}" --force
-for f in {pip,pip2,pip2.7}; do
-  sed -i -e "1 s|^.*$|#!${DEST}/bin/python2.7|g" "${DEST}/bin/$f"
-done
-popd
-}
-
-### BUILD ###
-_build() {
-  _build_zlib
-  _build_bzip
-  _build_openssl
-  _build_ncurses
-  _build_sqlite
-  _build_bdb
-  _build_libffi
-  _build_expat
-  _build_python
-  _build_setuptools
-  _build_pip
-  _package
-}
-
+# Create the DroboApp tgz file.
 _create_tgz() {
-  local appname="$(basename ${PWD})"
-  local appfile="${PWD}/${appname}.tgz"
+  local FILE="${PWD}/${NAME}.tgz"
 
-  if [[ -f "${appfile}" ]]; then
-    rm -v "${appfile}"
+  if [[ -f "${FILE}" ]]; then
+    rm -v "${FILE}"
   fi
 
   pushd "${DEST}"
-  tar --verbose --create --numeric-owner --owner=0 --group=0 --gzip --file "${appfile}" *
+  tar --verbose --create --numeric-owner --owner=0 --group=0 --gzip --file "${FILE}" *
   popd
 }
 
+# Package the DroboApp
 _package() {
-  cp -v -aR src/dest/* "${DEST}"/
+  mkdir -p "${DEST}"
+  [[ -d "src/dest" ]] && cp -vafR "src/dest"/* "${DEST}"/
   find "${DEST}" -name "._*" -print -delete
   _create_tgz
 }
 
+# Remove all compiled files.
 _clean() {
-  rm -v -fr "${DEPS}"
-  rm -v -fr "${DEST}"
-  rm -v -fr target/*
+  rm -vfr "${DEPS}"
+  rm -vfr "${DEST}"
+  rm -vfr target/*
 }
 
+# Removes all files created during the build.
 _dist_clean() {
   _clean
-  rm -v -f logfile*
-  rm -v -fr download/*
+  rm -vf logfile*
+  rm -vfr download/*
 }
+
+### application-specific functions ###
+source app.sh
 
 case "${1:-}" in
   clean)     _clean ;;
