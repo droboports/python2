@@ -158,7 +158,7 @@ cp -avR "target/${FOLDER}" "target/${FOLDER}-native"
 pushd "target/${FOLDER}"
 export _PYTHON_HOST_PLATFORM="linux-armv7l"
 rm -fvR Modules/_ctypes/libffi*
-./configure --host="${HOST}" --build="$(uname -p)" --prefix="${DEST}" --enable-shared --enable-ipv6 --enable-unicode --with-system-ffi --with-system-expat --with-dbmliborder=bdb:gdbm:ndbm \
+./configure --host="${HOST}" --build="$(uname -p)" --prefix="${DEST}" --mandir="${DEST}/man" --enable-shared --enable-ipv6 --enable-unicode --with-system-ffi --with-system-expat --with-dbmliborder=bdb:gdbm:ndbm \
   PYTHON_FOR_BUILD="_PYTHON_PROJECT_BASE=${PWD} _PYTHON_HOST_PLATFORM=${_PYTHON_HOST_PLATFORM} PYTHONPATH=${PWD}/build/lib.${_PYTHON_HOST_PLATFORM}-2.7:${PWD}/Lib:${PWD}/Lib/plat-linux2 ${PWD}/../${FOLDER}-native/python" \
   CPPFLAGS="${CPPFLAGS} -I${DEPS}/include/ncurses" LDFLAGS="${LDFLAGS} -L${PWD}"\
   ac_cv_have_long_long_format=yes ac_cv_buggy_getaddrinfo=no ac_cv_file__dev_ptmx=yes ac_cv_file__dev_ptc=no
