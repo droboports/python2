@@ -14,6 +14,6 @@ set -o nounset  # exit on unset variable
 set -o pipefail # propagate last error code on pipe
 set -o xtrace   # enable script tracing
 
-if [ -h "/usr/bin/python" ] && [ "$(readlink /usr/bin/python)" = "${prog_dir}/bin/python2.7" ]; then
+if [ -h "/usr/bin/python" ] && [ "$(readlink /usr/bin/python)" = "${prog_dir}/bin/python" ]; then
   rm -f "/usr/bin/python"
 fi
