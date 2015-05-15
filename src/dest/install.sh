@@ -21,10 +21,3 @@ find "${prog_dir}" -type f -name "*.default" -print | while read deffile; do
     cp -vf "${deffile}" "${basefile}"
   fi
 done
-
-# symlink /usr/bin/python
-if [ ! -e "/usr/bin/python" ]; then
-  ln -s "${prog_dir}/bin/python2.7" "/usr/bin/python"
-elif [ -h "/usr/bin/python" ] && [ "$(readlink /usr/bin/python)" != "${prog_dir}/bin/python2.7" ]; then
-  ln -fs "${prog_dir}/bin/python2.7" "/usr/bin/python"
-fi
