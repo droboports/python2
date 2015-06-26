@@ -7,8 +7,8 @@
 
 framework_version="2.1"
 name="python2"
-version="2.7.9"
-description="Python 2.7.9"
+version="2.7.10"
+description="Python 2.7.10"
 depends=""
 webui=""
 

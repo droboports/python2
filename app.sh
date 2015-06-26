@@ -33,7 +33,7 @@ popd
 
 ### OPENSSL ###
 _build_openssl() {
-local VERSION="1.0.2a"
+local VERSION="1.0.2c"
 local FOLDER="openssl-${VERSION}"
 local FILE="${FOLDER}.tar.gz"
 local URL="http://www.openssl.org/source/${FILE}"
@@ -41,20 +41,18 @@ local URL="http://www.openssl.org/source/${FILE}"
 _download_tgz "${FILE}" "${URL}" "${FOLDER}"
 cp -vf "src/${FOLDER}-parallel-build.patch" "target/${FOLDER}/"
 pushd "target/${FOLDER}"
-patch -p1 < "${FOLDER}-parallel-build.patch"
-./Configure --prefix="${DEPS}" \
-  --openssldir="${DEST}/etc/ssl" \
-  --with-zlib-include="${DEPS}/include" \
-  --with-zlib-lib="${DEPS}/lib" \
-  shared zlib-dynamic threads linux-armv4 -DL_ENDIAN ${CFLAGS} ${LDFLAGS}
+patch -p1 -i "${FOLDER}-parallel-build.patch"
+./Configure --prefix="${DEPS}" --openssldir="${DEST}/etc/ssl" \
+  zlib-dynamic --with-zlib-include="${DEPS}/include" --with-zlib-lib="${DEPS}/lib" \
+  shared threads linux-armv4 -DL_ENDIAN ${CFLAGS} ${LDFLAGS} -Wa,--noexecstack -Wl,-z,noexecstack
 sed -i -e "s/-O3//g" Makefile
-make -j1
+make
 make install_sw
 mkdir -p "${DEST}/libexec"
-cp -avR "${DEPS}/bin/openssl" "${DEST}/libexec/"
-cp -avR "${DEPS}/lib"/* "${DEST}/lib/"
-rm -fvr "${DEPS}/lib"
-rm -fv "${DEST}/lib"/*.a
+cp -vfa "${DEPS}/bin/openssl" "${DEST}/libexec/"
+cp -vfaR "${DEPS}/lib"/* "${DEST}/lib/"
+rm -vfr "${DEPS}/lib"
+rm -vf "${DEST}/lib/libcrypto.a" "${DEST}/lib/libssl.a"
 sed -i -e "s|^exec_prefix=.*|exec_prefix=${DEST}|g" "${DEST}/lib/pkgconfig/openssl.pc"
 popd
 }
@@ -77,7 +75,7 @@ popd
 
 ### SQLITE ###
 _build_sqlite() {
-local VERSION="3080900"
+local VERSION="3081002"
 local FOLDER="sqlite-autoconf-${VERSION}"
 local FILE="${FOLDER}.tar.gz"
 local URL="http://sqlite.org/2015/${FILE}"
@@ -85,7 +83,7 @@ local URL="http://sqlite.org/2015/${FILE}"
 _download_tgz "${FILE}" "${URL}" "${FOLDER}"
 pushd "target/${FOLDER}"
 ./configure --host="${HOST}" --prefix="${DEPS}" --libdir="${DEST}/lib" --disable-static
-make
+make -j1
 make install
 popd
 }
@@ -139,7 +137,7 @@ popd
 
 ### PYTHON2 ###
 _build_python() {
-local VERSION="2.7.9"
+local VERSION="2.7.10"
 local FOLDER="Python-${VERSION}"
 local FILE="${FOLDER}.tgz"
 local URL="https://www.python.org/ftp/python/${VERSION}/${FILE}"
@@ -178,7 +176,7 @@ _build_setuptools() {
 # http://nairobi-embedded.org/qemu_usermode.html#qemu_ld_prefix
 # export QEMU_LD_PREFIX="${HOME}/xtools/toolchain/${DROBO}/${HOST}/libc"
 
-local VERSION="15.0"
+local VERSION="18.0.1"
 local FOLDER="setuptools-${VERSION}"
 local FILE="${FOLDER}.tar.gz"
 local URL="https://pypi.python.org/packages/source/s/setuptools/${FILE}"
@@ -203,7 +201,7 @@ _build_pip() {
 # http://nairobi-embedded.org/qemu_usermode.html#qemu_ld_prefix
 # export QEMU_LD_PREFIX="${HOME}/xtools/toolchain/${DROBO}/${HOST}/libc"
 
-local VERSION="6.1.1"
+local VERSION="7.0.3"
 local FOLDER="pip-${VERSION}"
 local FILE="${FOLDER}.tar.gz"
 local URL="https://pypi.python.org/packages/source/p/pip/${FILE}"
