@@ -7,10 +7,9 @@ local URL="http://zlib.net/${FILE}"
 
 _download_tgz "${FILE}" "${URL}" "${FOLDER}"
 pushd "target/${FOLDER}"
-./configure --prefix="${DEPS}" --libdir="${DEST}/lib"
+./configure --prefix="${DEPS}" --libdir="${DEST}/lib" --shared
 make
 make install
-rm -v "${DEST}/lib"/*.a
 popd
 }
 
@@ -115,7 +114,7 @@ pushd "target/${FOLDER}"
 ./configure --host="${HOST}" --prefix="${DEPS}" --libdir="${DEST}/lib" --disable-static
 make
 make install
-mkdir -vp "${DEPS}/include/"
+mkdir -p "${DEPS}/include/"
 cp -v "${DEST}/lib/${FOLDER}/include"/* "${DEPS}/include/"
 popd
 }
@@ -183,6 +182,9 @@ local URL="https://pypi.python.org/packages/source/s/setuptools/${FILE}"
 
 _download_tgz "${FILE}" "${URL}" "${FOLDER}"
 pushd "target/${FOLDER}"
+sed -e "21i${DEST}/etc/ssl/certs/ca-certificates.crt" \
+    -e "21,26d" \
+    -i setuptools/ssl_support.py
 QEMU_LD_PREFIX="${HOME}/xtools/toolchain/${DROBO}/${HOST}/libc" \
   PYTHONPATH="${DEST}/lib/python2.7/site-packages" "${DEST}/bin/python" setup.py \
   build --executable="${DEST}/bin/python2.7" \
