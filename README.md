@@ -33,7 +33,7 @@ First, install the package `qemu-user-static`.
 Then, make sure there are no residual files, and use the `BUILD_DEST` variable.
 ```
 ./build.sh clean
-XPYTHON="${HOME}/xtools/python2/5n"
+XPYTHON="${HOME}/xtools/python2/fs"
 BUILD_DEST="${XPYTHON}" ./build.sh
 cp -vfaR ./target/install/bin/* "${XPYTHON}/bin/"
 cp -vfaR ./target/install/include/* "${XPYTHON}/include/"
