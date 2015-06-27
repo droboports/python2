@@ -26,6 +26,27 @@ Each invocation creates a log file with all the generated output.
 * `./build.sh clean` removes everything but downloaded files.
 * `./build.sh package` repackages the DroboApp, without recompiling.
 
+## Build a cross-compiler
+
+First, install the package `qemu-user-static`.
+
+Then, make sure there are no residual files, and use the `BUILD_DEST` variable.
+```
+./build.sh clean
+XPYTHON="${HOME}/xtools/python2/5n"
+BUILD_DEST="${XPYTHON}" ./build.sh
+cp -vfaR ./target/install/bin/* "${XPYTHON}/bin/"
+cp -vfaR ./target/install/include/* "${XPYTHON}/include/"
+```
+
+And set the `QEMU_LD_PREFIX` to use the python cross-compiler.
+```
+. crosscompile.sh
+QEMU_LD_PREFIX="${TOOLCHAIN}/${HOST}/libc" "${XPYTHON}/bin/python" setup.py build_ext \
+  --include-dirs="${XPYTHON}/include" --library-dirs="${XPYTHON}/lib" \
+  --force build --force bdist_egg --dist-dir .
+```
+
 ## Missing modules
 
 ```
