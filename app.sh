@@ -35,7 +35,7 @@ _build_openssl() {
 local VERSION="1.0.2d"
 local FOLDER="openssl-${VERSION}"
 local FILE="${FOLDER}.tar.gz"
-local URL="http://www.openssl.org/source/${FILE}"
+local URL="http://mirror.switch.ch/ftp/mirror/openssl/source/${FILE}"
 
 _download_tgz "${FILE}" "${URL}" "${FOLDER}"
 cp -vf "src/${FOLDER}-parallel-build.patch" "target/${FOLDER}/"
@@ -175,7 +175,7 @@ _build_setuptools() {
 # http://nairobi-embedded.org/qemu_usermode.html#qemu_ld_prefix
 # export QEMU_LD_PREFIX="${HOME}/xtools/toolchain/${DROBO}/${HOST}/libc"
 
-local VERSION="18.0.1"
+local VERSION="18.1"
 local FOLDER="setuptools-${VERSION}"
 local FILE="${FOLDER}.tar.gz"
 local URL="https://pypi.python.org/packages/source/s/setuptools/${FILE}"
@@ -203,7 +203,7 @@ _build_pip() {
 # http://nairobi-embedded.org/qemu_usermode.html#qemu_ld_prefix
 # export QEMU_LD_PREFIX="${HOME}/xtools/toolchain/${DROBO}/${HOST}/libc"
 
-local VERSION="7.0.3"
+local VERSION="7.1.0"
 local FOLDER="pip-${VERSION}"
 local FILE="${FOLDER}.tar.gz"
 local URL="https://pypi.python.org/packages/source/p/pip/${FILE}"
@@ -220,6 +220,14 @@ done
 popd
 }
 
+### CERTIFICATES ###
+_build_certificates() {
+# update CA certificates on a Debian/Ubuntu machine:
+#sudo update-ca-certificates
+cp -vf /etc/ssl/certs/ca-certificates.crt "${DEST}/etc/ssl/certs/"
+ln -vfs certs/ca-certificates.crt "${DEST}/etc/ssl/cert.pem"
+}
+
 ### BUILD ###
 _build() {
   _build_zlib
@@ -233,5 +241,6 @@ _build() {
   _build_python
   _build_setuptools
   _build_pip
+  _build_certificates
   _package
 }
