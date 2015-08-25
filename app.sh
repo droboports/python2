@@ -82,7 +82,7 @@ local URL="http://sqlite.org/2015/${FILE}"
 _download_tgz "${FILE}" "${URL}" "${FOLDER}"
 pushd "target/${FOLDER}"
 ./configure --host="${HOST}" --prefix="${DEPS}" --libdir="${DEST}/lib" --disable-static
-make -j1
+make
 make install
 popd
 }
