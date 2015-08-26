@@ -124,7 +124,7 @@ _build_expat() {
 local VERSION="2.1.0"
 local FOLDER="expat-${VERSION}"
 local FILE="${FOLDER}.tar.gz"
-local URL="http://switch.dl.sourceforge.net/project/expat/expat/2.1.0/${FILE}"
+local URL="http://sourceforge.net/projects/expat/files/expat/${VERSION}/${FILE}"
 
 _download_tgz "${FILE}" "${URL}" "${FOLDER}"
 pushd "target/${FOLDER}"
